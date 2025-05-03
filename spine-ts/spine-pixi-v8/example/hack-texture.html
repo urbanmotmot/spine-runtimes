@@ -1,0 +1,71 @@
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>spine-pixi-v8</title>
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@8.4.1/dist/pixi.min.js"></script>
+    <script src="../dist/iife/spine-pixi-v8.js"></script>
+    <link rel="stylesheet" href="../../index.css">
+  </head>
+
+  <body>
+    <script>
+      (async function () {
+        var app = new PIXI.Application();
+        await app.init({
+          width: window.innerWidth,
+          height: window.innerHeight,
+          resolution: window.devicePixelRatio || 1,
+          autoDensity: true,
+          resizeTo: window,
+          backgroundColor: 0x2c3e50,
+          hello: true,
+        })
+        document.body.appendChild(app.view);
+
+        PIXI.Assets.add({alias: "spineData", src: "./assets/hack-texture/skeleton.json"});
+        PIXI.Assets.add({alias: "spineAtlas", src: "./assets/hack-texture/skeleton.atlas"});
+        PIXI.Assets.add({alias: "rightEye", src: "./assets/hack-texture/textures/RightEye.png"});
+        PIXI.Assets.add({alias: "leftEye", src: "./assets/hack-texture/textures/LeftEye.png"});
+        PIXI.Assets.add({alias: "mouth", src: "./assets/hack-texture/textures/Mouth.png"});
+        PIXI.Assets.add({alias: "packed", src: "./assets/hack-texture/textures/packed.json"});
+
+        let assets = await PIXI.Assets.load(["spineData", "spineAtlas", 'rightEye', 'leftEye', 'mouth', 'packed']);
+
+        // Unscaled skeleton using non-packed textures
+        // This one looks correct
+        const face1 = spine.Spine.from({skeleton: "spineData", atlas: "spineAtlas"});
+        face1.state.setAnimation(0, "TestAnim", true);
+        face1.x = window.innerWidth / 2 - 300;
+        face1.y = window.innerHeight / 2 + 200;
+        app.stage.addChild(face1);
+        spine.hackSlotTexture(face1.skeleton, 'RightEye', assets.rightEye);
+        spine.hackSlotTexture(face1.skeleton, 'LeftEye', assets.leftEye);
+        spine.hackSlotTexture(face1.skeleton, 'Mouth', assets.mouth);
+
+        // Scaled skeleton with non-packed textures
+        // Problem: hacked textures don't respect skeleton's scale
+        const face2 = spine.Spine.from({skeleton: "spineData", atlas: "spineAtlas", scale:.5});
+        face2.state.setAnimation(0, "TestAnim", true);
+        face2.x = window.innerWidth / 2 - 100;
+        face2.y = window.innerHeight / 2 + 100;
+        app.stage.addChild(face2);
+        spine.hackSlotTexture(face2.skeleton, 'RightEye', assets.rightEye);
+        spine.hackSlotTexture(face2.skeleton, 'LeftEye', assets.leftEye);
+        spine.hackSlotTexture(face2.skeleton, 'Mouth', assets.mouth);
+
+        
+        // Unscaled skeleton with packed textures
+        // Problem: x/y positions/offsets wrong
+        const face3 = spine.Spine.from({skeleton: "spineData", atlas: "spineAtlas"});
+        face3.state.setAnimation(0, "TestAnim", true);
+        face3.x = window.innerWidth / 2 + 100;
+        face3.y = window.innerHeight / 2 + 200;
+        app.stage.addChild(face3);
+        spine.hackSlotTexture(face3.skeleton, 'RightEye', assets.packed.textures['textures/RightEye']);
+        spine.hackSlotTexture(face3.skeleton, 'LeftEye', assets.packed.textures['textures/LeftEye']);
+        spine.hackSlotTexture(face3.skeleton, 'Mouth', assets.packed.textures['textures/Mouth']);
+
+      })();
+    </script>
+  </body>
+</html>

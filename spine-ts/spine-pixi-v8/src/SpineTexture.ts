@@ -28,7 +28,7 @@
  *****************************************************************************/
 
 import { Texture as PixiTexture } from 'pixi.js';
-import { BlendMode, Texture, TextureFilter, TextureWrap } from '@esotericsoftware/spine-core';
+import { Attachment, BlendMode, RegionAttachment, Skeleton, Slot, Texture, TextureFilter, TextureRegion, TextureWrap } from '@esotericsoftware/spine-core';
 
 import type { BLEND_MODES, SCALE_MODE, TextureSource, WRAP_MODE } from 'pixi.js';
 
@@ -140,4 +140,71 @@ export class SpineTexture extends Texture {
 				throw new Error(`Unknown blendMode: ${String(blend)}`);
 		}
 	}
+}
+
+export function hackSlotTexture(
+	skeleton: Skeleton,
+    slotName: string,
+    texture: PixiTexture
+) {
+
+	let slot = skeleton.findSlot(slotName);
+	if (slot == null) {
+		console.log(`slot ${slotName} not found.`);
+		return;
+	}
+    if (slot.getAttachment() == null) {
+        console.warn(`null attachment fot slot ${slotName}`);
+        return;
+    }
+
+	// Creating a copy required when there are multiple instances of same skeleton.
+    let attachmentCopy = (slot.getAttachment() as Attachment).copy();
+    slot.setAttachment(attachmentCopy);
+    const regionAttachment = attachmentCopy as RegionAttachment; 
+
+    let region = new TextureRegion();
+
+    region.texture = SpineTexture.from(texture.source);
+
+    region.width = texture.width;
+    region.height = texture.height;
+    region.originalWidth = texture.orig.width;
+    region.originalHeight = texture.orig.height;
+
+	if (texture.trim != null){
+		let trim = texture.trim;
+		region.offsetX = trim.x + trim.width / 2 - texture.orig.width / 2;
+		region.offsetY = trim.y + trim.height / 2 - texture.orig.height / 2;
+		// regionAttachment.x = ?; // setting these to trim.y and -trim.y almost looks right? but why?
+		// regionAttachment.y = ?;
+	}
+
+    const u = texture.frame.x / texture.source.width;
+    const v = texture.frame.y / texture.source.height;
+    const u2 = (texture.frame.x + texture.frame.width) / texture.source.width;
+    const v2 = (texture.frame.y + texture.frame.height) / texture.source.height;
+
+    if (texture.rotate === 2) {
+        region.u = u2;
+        region.v = v2;
+        region.u2 = u;
+        region.v2 = v;
+        region.degrees = 90;
+        regionAttachment.width = texture.frame.height;
+        regionAttachment.height = texture.frame.width;
+    } else {
+        region.u = u;
+        region.v = v;
+        region.u2 = u2;
+        region.v2 = v2;
+        region.degrees = 0;
+        regionAttachment.width = texture.frame.width;
+        regionAttachment.height = texture.frame.height;
+    }
+
+    regionAttachment.region = region;
+    regionAttachment.updateRegion();
+
+    return true;
 }
